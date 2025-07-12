@@ -1,8 +1,60 @@
-/* Custom styles for EShop */
+/* Professional EShop Styles - Modern Dark Theme */
 
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;
+}
+
+/* Custom Animations */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 0 20px #7c3aed;
+  }
+  to {
+    box-shadow: 0 0 30px #a855f7, 0 0 40px #ec4899;
+  }
+}
+
+/* Navigation Enhancements */
+.nav-link {
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-underline {
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #7c3aed, #a855f7, #ec4899);
+  transition: width 0.3s ease;
+}
+
+.nav-link:hover .nav-underline {
+  width: 100%;
 }
 
 /* Loading animation */
@@ -10,10 +62,10 @@ html {
   display: inline-block;
   width: 20px;
   height: 20px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #3498db;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top: 3px solid #7c3aed;
   border-radius: 50%;
-  animation: spin 2s linear infinite;
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
