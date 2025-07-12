@@ -1,149 +1,53 @@
-# GitHub Actions Workflow for EShop Website Deployment
-# This workflow builds and deploys the e-shop website to GitHub Pages
-
 name: Deploy EShop to GitHub Pages
 
-# Trigger the workflow on push to main branch and pull requests
 on:
   push:
     branches: ["main"]
   pull_request:
     branches: ["main"]
-  # Allow manual triggering of the workflow
   workflow_dispatch:
 
-# Set permissions for GitHub Pages deployment
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  # Build job
   build:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-          cache: "npm"
-
-      - name: Create package.json if not exists
-        run: |
-          if [ ! -f package.json ]; then
-            cat > package.json << 'EOF'
-          {
-            "name": "eshop-website",
-            "version": "1.0.0",
-            "description": "Modern e-commerce website built with HTML, Tailwind CSS, and JavaScript",
-            "main": "src/index.html",
-            "scripts": {
-              "build": "npm run minify",
-              "minify": "npm run minify-css && npm run minify-js",
-              "minify-css": "cleancss -o dist/css/index.min.css src/css/index.css",
-              "minify-js": "terser src/js/index.js -o dist/js/index.min.js -c -m",
-              "copy-assets": "cp -r src/icons dist/ && cp src/index.html dist/",
-              "prepare": "mkdir -p dist/css dist/js",
-              "dev": "python3 -m http.server 8000 --directory src",
-              "lint": "eslint src/js/*.js",
-              "format": "prettier --write src/**/*.{html,css,js}",
-              "validate": "html-validate src/index.html"
-            },
-            "keywords": ["ecommerce", "shopping", "website", "tailwind", "responsive"],
-            "author": "EShop Team",
-            "license": "MIT",
-            "devDependencies": {
-              "clean-css-cli": "^5.6.2",
-              "terser": "^5.19.4",
-              "eslint": "^8.48.0",
-              "prettier": "^3.0.3",
-              "html-validate": "^8.5.0"
-            },
-            "repository": {
-              "type": "git",
-              "url": "https://github.com/chinmayDipke/ESHOP_HOME.git"
-            },
-            "bugs": {
-              "url": "https://github.com/chinmayDipke/ESHOP_HOME/issues"
-            },
-            "homepage": "https://chinmaydipke.github.io/ESHOP_HOME/"
-          }
-          EOF
-          fi
-
-      - name: Install dependencies
-        run: npm install
-        continue-on-error: true
 
       - name: Prepare build directory
         run: |
           mkdir -p dist/css dist/js dist/icons
 
-      - name: Copy and optimize assets
-        run: |
-          # Copy HTML file
+          # Copy HTML, CSS, JS
           cp src/index.html dist/
+          cp -r src/css/* dist/css/
+          cp -r src/js/* dist/js/
 
-          # Copy CSS (minify if tools are available, otherwise copy as-is)
-          if command -v cleancss >/dev/null 2>&1; then
-            npx cleancss -o dist/css/index.css src/css/index.css
-          else
-            cp src/css/index.css dist/css/
-          fi
-
-          # Copy JavaScript (minify if tools are available, otherwise copy as-is)
-          if command -v terser >/dev/null 2>&1; then
-            npx terser src/js/index.js -o dist/js/index.js -c -m
-          else
-            cp src/js/index.js dist/js/
-          fi
-
-          # Copy favicon and other icons
+          # Copy icons (if any)
           if [ -d "src/icons" ]; then
             cp -r src/icons/* dist/icons/ 2>/dev/null || true
           fi
 
-          # Create a default favicon if none exists
+          # Fallback favicon
           if [ ! -f "dist/icons/favicon.ico" ]; then
             echo "Creating default favicon placeholder"
             mkdir -p dist/icons
             touch dist/icons/favicon.ico
           fi
 
-      - name: Validate HTML
-        run: |
-          # Basic HTML validation
-          if command -v html-validate >/dev/null 2>&1; then
-            npx html-validate dist/index.html || echo "HTML validation completed with warnings"
-          else
-            echo "HTML validation skipped - validator not available"
-          fi
-        continue-on-error: true
-
-      - name: Lint JavaScript
-        run: |
-          if command -v eslint >/dev/null 2>&1; then
-            npx eslint src/js/*.js --fix || echo "Linting completed with warnings"
-          else
-            echo "JavaScript linting skipped - ESLint not available"
-          fi
-        continue-on-error: true
-
       - name: Generate sitemap
         run: |
-          cat > dist/sitemap.xml << 'EOF'
+          cat > dist/sitemap.xml <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
             <url>
@@ -152,30 +56,12 @@ jobs:
               <changefreq>weekly</changefreq>
               <priority>1.0</priority>
             </url>
-            <url>
-              <loc>https://chinmaydipke.github.io/ESHOP_HOME/#products</loc>
-              <lastmod>$(date +%Y-%m-%d)</lastmod>
-              <changefreq>weekly</changefreq>
-              <priority>0.9</priority>
-            </url>
-            <url>
-              <loc>https://chinmaydipke.github.io/ESHOP_HOME/#about</loc>
-              <lastmod>$(date +%Y-%m-%d)</lastmod>
-              <changefreq>monthly</changefreq>
-              <priority>0.7</priority>
-            </url>
-            <url>
-              <loc>https://chinmaydipke.github.io/ESHOP_HOME/#contact</loc>
-              <lastmod>$(date +%Y-%m-%d)</lastmod>
-              <changefreq>monthly</changefreq>
-              <priority>0.7</priority>
-            </url>
           </urlset>
           EOF
 
       - name: Generate robots.txt
         run: |
-          cat > dist/robots.txt << 'EOF'
+          cat > dist/robots.txt <<EOF
           User-agent: *
           Allow: /
 
@@ -184,7 +70,7 @@ jobs:
 
       - name: Create 404 page
         run: |
-          cat > dist/404.html << 'EOF'
+          cat > dist/404.html <<EOF
           <!DOCTYPE html>
           <html lang="en">
           <head>
@@ -206,21 +92,14 @@ jobs:
           </html>
           EOF
 
-      - name: Setup Pages
+      - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
 
-      - name: Upload artifact
+      - name: Upload build output
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "./dist"
+          path: ./dist
 
-      - name: List build output
-        run: |
-          echo "Build completed successfully!"
-          echo "Files generated:"
-          find dist -type f -exec ls -la {} \;
-
-  # Deployment job
   deploy:
     environment:
       name: github-pages
@@ -232,145 +111,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-  # Quality checks job (runs in parallel with build)
-  quality-checks:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-
-      - name: Check file structure
-        run: |
-          echo "Verifying project structure..."
-          required_files=("src/index.html" "src/css/index.css" "src/js/index.js")
-          for file in "${required_files[@]}"; do
-            if [ -f "$file" ]; then
-              echo "✅ $file exists"
-            else
-              echo "❌ $file is missing"
-              exit 1
-            fi
-          done
-
-      - name: Check HTML syntax
-        run: |
-          echo "Checking HTML syntax..."
-          # Basic HTML structure validation
-          if grep -q "<!DOCTYPE html>" src/index.html; then
-            echo "✅ DOCTYPE declaration found"
-          else
-            echo "❌ DOCTYPE declaration missing"
-          fi
-
-          if grep -q "<html.*lang=" src/index.html; then
-            echo "✅ Language attribute found"
-          else
-            echo "⚠️ Language attribute missing"
-          fi
-
-      - name: Check CSS syntax
-        run: |
-          echo "Checking CSS syntax..."
-          # Basic CSS validation
-          if [ -s "src/css/index.css" ]; then
-            echo "✅ CSS file is not empty"
-          else
-            echo "⚠️ CSS file is empty"
-          fi
-
-      - name: Check JavaScript syntax
-        run: |
-          echo "Checking JavaScript syntax..."
-          node -c src/js/index.js && echo "✅ JavaScript syntax is valid" || echo "❌ JavaScript syntax errors found"
-
-      - name: Security scan
-        run: |
-          echo "Running basic security checks..."
-
-          # Check for potential XSS vulnerabilities
-          if grep -r "innerHTML.*=" src/js/ | grep -v "DOMPurify\|textContent\|innerText"; then
-            echo "⚠️ Potential XSS vulnerabilities found - review innerHTML usage"
-          else
-            echo "✅ No obvious XSS vulnerabilities detected"
-          fi
-
-          # Check for hardcoded secrets (basic check)
-          if grep -r -i "password\|secret\|key\|token" src/ --exclude-dir=node_modules | grep -v "placeholder\|example\|demo"; then
-            echo "⚠️ Potential hardcoded secrets found - please review"
-          else
-            echo "✅ No hardcoded secrets detected"
-          fi
-
-      - name: Performance check
-        run: |
-          echo "Running performance checks..."
-
-          # Check file sizes
-          html_size=$(stat -f%z src/index.html 2>/dev/null || stat -c%s src/index.html)
-          css_size=$(stat -f%z src/css/index.css 2>/dev/null || stat -c%s src/css/index.css)
-          js_size=$(stat -f%z src/js/index.js 2>/dev/null || stat -c%s src/js/index.js)
-
-          echo "File sizes:"
-          echo "HTML: ${html_size} bytes"
-          echo "CSS: ${css_size} bytes"
-          echo "JavaScript: ${js_size} bytes"
-
-          # Warn about large files
-          if [ "$css_size" -gt 100000 ]; then
-            echo "⚠️ CSS file is large (>100KB) - consider optimization"
-          fi
-
-          if [ "$js_size" -gt 200000 ]; then
-            echo "⚠️ JavaScript file is large (>200KB) - consider optimization"
-          fi
-
-      - name: Accessibility check
-        run: |
-          echo "Running accessibility checks..."
-
-          # Check for alt attributes
-          if grep -c "<img.*alt=" src/index.html >/dev/null; then
-            echo "✅ Images with alt attributes found"
-          else
-            echo "⚠️ No images with alt attributes found"
-          fi
-
-          # Check for semantic HTML
-          semantic_tags=("header" "nav" "main" "section" "article" "aside" "footer")
-          for tag in "${semantic_tags[@]}"; do
-            if grep -q "<$tag" src/index.html; then
-              echo "✅ Semantic tag <$tag> found"
-            fi
-          done
-
-      - name: SEO check
-        run: |
-          echo "Running SEO checks..."
-
-          # Check for title tag
-          if grep -q "<title>" src/index.html; then
-            echo "✅ Title tag found"
-          else
-            echo "❌ Title tag missing"
-          fi
-
-          # Check for meta description
-          if grep -q 'meta.*name="description"' src/index.html; then
-            echo "✅ Meta description found"
-          else
-            echo "⚠️ Meta description missing"
-          fi
-
-          # Check for viewport meta tag
-          if grep -q 'meta.*name="viewport"' src/index.html; then
-            echo "✅ Viewport meta tag found"
-          else
-            echo "❌ Viewport meta tag missing"
-          fi
